@@ -4,6 +4,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <glib.h>
 
 
 typedef struct nodes
@@ -132,30 +133,48 @@ int remove_val(node_t* root, node_t* newNode){
 
     return 0;
 }
+int create_and_insert_node(GArray * nodeArray, int data){
+    int ret=0;
+
+    node_t  temp;
+    //*Initialize left and right children as NULL*/
+    temp.right=NULL;
+    temp.left=NULL;
+
+    /*set data*/
+    temp.data=data;
+
+    g_array_append_val(nodeArray,temp);
+
+
+    if(nodeArray->len>1) {
+        ret = insert(&g_array_index(nodeArray, node_t, 0), &g_array_index(nodeArray, node_t, (nodeArray->len) - 1));
+    }
+    return ret;
+}
+
 
 int main(void) {
     int ret=0;
     /*this can be a vector-like or queue structure*/
+    GArray * nodeArray=g_array_new (FALSE, TRUE, sizeof(node_t));
     /*create root*/
-    node_t *root = newNode(1);
+
+    create_and_insert_node(nodeArray,1);
+
     /*create some nodes*/
-    node_t *node1 = newNode(10);
-    node_t *node2 = newNode(3);
-    node_t *node3 = newNode(11);
-    node_t *node4 = newNode(7);
-    node_t *node5 = newNode(13);
+    create_and_insert_node(nodeArray,2);
+    create_and_insert_node(nodeArray,10);
+    create_and_insert_node(nodeArray,3);
+    create_and_insert_node(nodeArray,7);
+    create_and_insert_node(nodeArray,13);
 
-    insert(root,node1);
-    insert(root,node2);
-    insert(root,node3);
-    insert(root,node4);
-    insert(root,node5);
-
+    node_t *root = &g_array_index(nodeArray,node_t,0);
     /*print existing nodes*/
     traverse(root);
 
     /*test lookup*/
-    node_t* foundNode=lookup(root, 13);
+    node_t* foundNode=lookup(root, 1);
     if(foundNode!=NULL) printf("Node found!\n");
     else  printf("Node null!\n");
 
@@ -163,6 +182,8 @@ int main(void) {
 
     /*traverse again*/
 
+
     printf("Done!\n");
+    g_array_free(nodeArray, TRUE);
     return 0;
 }

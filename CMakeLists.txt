@@ -1,5 +1,11 @@
-cmake_minimum_required(VERSION 3.13)
+cmake_minimum_required(VERSION 3.1)
 project(BinaryTree)
-set(CMAKE_C_STANDARD 99)
-set ( CMAKE_C_FLAGS "-O0")
-add_executable(BinaryTree main.c)
+
+include(FindPkgConfig)
+pkg_check_modules(GLIB glib-2.0 REQUIRED)
+include_directories(${GLIB_INCLUDE_DIRS})
+
+set(SOURCE_FILES main.c)
+
+add_executable(${PROJECT_NAME} ${SOURCE_FILES})
+target_link_libraries(${PROJECT_NAME} ${GLIB_LIBRARIES})
