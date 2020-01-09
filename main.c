@@ -12,6 +12,7 @@ typedef struct nodes
     int data;
     struct nodes *left;
     struct nodes *right;
+
 }node_t;
 
 
@@ -25,9 +26,12 @@ node_t* newNode(int data)
     // Assign data to this node
     node->data = data;
 
+
     // Initialize left and right children as NULL
     node->left = NULL;
     node->right = NULL;
+
+
     return(node);
 }
 
@@ -73,16 +77,17 @@ int insert(node_t* root, node_t* newNode){
     return 0;
 }
 
-node_t* lookup(node_t* root, int data){
+int lookup(node_t* root,node_t** found, node_t** parent, int data){
     int retVal=0;
     //check if there is a tree root
     if(root == NULL) return -1;
-    node_t* currentNode =  root;
+    node_t* currentNode  = root;
 
     while(1){
         //check value
         if(data == currentNode->data){
-            return currentNode;
+            *found=currentNode;
+            return 0;
         }
         //right side?
         if(data > currentNode->data){
@@ -90,6 +95,7 @@ node_t* lookup(node_t* root, int data){
                 return -1;
             }else{
                 //dig deeper
+               *parent=currentNode;
                 currentNode = currentNode->right;
             }
             //left side
@@ -98,6 +104,7 @@ node_t* lookup(node_t* root, int data){
                 return -1;
             }else{
                 //dig deeper
+                *parent=currentNode;
                 currentNode = currentNode->left;
             }
         }
@@ -117,38 +124,79 @@ int traverse(node_t* currentNode){
 
     return 0;
 }
-int remove_val(node_t* root, node_t* newNode){
+void clear_parent_entry( node_t**parent_p,int data){
+    if((*parent_p)->right->data==data){
+        (*parent_p)->right=NULL;
+    }else{
+        (*parent_p)->left=NULL;
+    }
+}
+
+
+void bypass(node_t** found_p,node_t** parent_p){
+    if(*found_p==(*parent_p)->right)
+        (*parent_p)->right=(*found_p)->right;
+    else
+        (*parent_p)->left=(*found_p)->left;
+}
+
+void replace_with_successor(node_t** found_p,node_t** parent_p){
+
+
+}
+
+int remove_val(node_t* root, int data){
     /*find node and it's parent*/
+    int ret=0;
+
+    node_t* found;
+    node_t* parent;
+    ret=lookup(root,&found, &parent, data);
+    if(ret!=0) return -1;
 
     /*Option 1 is a leaf*/
-    /*terminate leaf*/
+    if(!(found->right || found->left)){
+        clear_parent_entry( &parent, data);
+        printf("Deleted a leaf\n");
+        free(found);
+        return 0;
+    }
+
 
     /*Option 2 one child*/
-    /*bypass to chiled*/
-    /*teminate node*/
+    if((int)(found->right) ^ (int)(found->left)){
+        bypass(&found, &parent);
+        printf("Deleted a node with one child\n");
+        free(found);
+        return 0;
+    }
 
-    /*Option 3 one child*/
-    /*breplace node with sucessor*/
-    /*teminate node*/
+
+    /*Option 3 two child*/
+    if((found->right && found->left)){
+            bypass(&found, &parent);
+            replace_with_successor(&found, &parent);
+            printf("Deleted a node with two children\n");
+            free(found);
+        return 0;
+    }
+
 
     return 0;
 }
-int create_and_insert_node(GArray * nodeArray, int data){
+
+
+int create_and_insert_node( GPtrArray* nodeArray, int data){
     int ret=0;
 
-    node_t  temp;
-    //*Initialize left and right children as NULL*/
-    temp.right=NULL;
-    temp.left=NULL;
-
-    /*set data*/
-    temp.data=data;
-
-    g_array_append_val(nodeArray,temp);
+    node_t*  temp=newNode(data);
+    g_ptr_array_add(nodeArray,temp);
 
 
     if(nodeArray->len>1) {
-        ret = insert(&g_array_index(nodeArray, node_t, 0), &g_array_index(nodeArray, node_t, (nodeArray->len) - 1));
+
+        ret = insert(g_ptr_array_index(nodeArray, 0),
+                g_ptr_array_index(nodeArray, (nodeArray->len)-1 ));
     }
     return ret;
 }
@@ -157,33 +205,44 @@ int create_and_insert_node(GArray * nodeArray, int data){
 int main(void) {
     int ret=0;
     /*this can be a vector-like or queue structure*/
-    GArray * nodeArray=g_array_new (FALSE, TRUE, sizeof(node_t));
+    GPtrArray* tree=g_ptr_array_new();
+
     /*create root*/
 
-    create_and_insert_node(nodeArray,1);
+
+    create_and_insert_node(tree,1);
 
     /*create some nodes*/
-    create_and_insert_node(nodeArray,2);
-    create_and_insert_node(nodeArray,10);
-    create_and_insert_node(nodeArray,3);
-    create_and_insert_node(nodeArray,7);
-    create_and_insert_node(nodeArray,13);
+    create_and_insert_node(tree,2);
+    create_and_insert_node(tree,10);
+    create_and_insert_node(tree,3);
+    create_and_insert_node(tree,7);
+    create_and_insert_node(tree,13);
 
-    node_t *root = &g_array_index(nodeArray,node_t,0);
+    node_t *root =g_ptr_array_index(tree, 0);
+
     /*print existing nodes*/
     traverse(root);
 
     /*test lookup*/
-    node_t* foundNode=lookup(root, 1);
-    if(foundNode!=NULL) printf("Node found!\n");
-    else  printf("Node null!\n");
+    node_t* found;
+    node_t* parent;
+    ret=lookup(root,&found, &parent, 3);
+    if(ret==0){
+        printf("Node found!\n");
+        printf("Found val: %d\n",found->data);
+        printf("Parent val: %d\n",parent->data);
+    }
+
+
 
     /*remove*/
-
+    remove_val( root, 13);
     /*traverse again*/
-
+    traverse(root);
 
     printf("Done!\n");
-    g_array_free(nodeArray, TRUE);
+    /*memory leaking a little bit. Might free ptr resources earlier*/
+    g_ptr_array_free (tree,TRUE);
     return 0;
 }
