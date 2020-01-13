@@ -124,24 +124,47 @@ int traverse(node_t* currentNode){
 
     return 0;
 }
-void clear_parent_entry( node_t**parent_p,int data){
-    if((*parent_p)->right->data==data){
+void clear_parent_entry( node_t**parent_p, node_t** found_p){
+    if((*parent_p)->right== (*found_p)){
         (*parent_p)->right=NULL;
     }else{
         (*parent_p)->left=NULL;
     }
+    free((*found_p));
 }
 
 
 void bypass(node_t** found_p,node_t** parent_p){
-    if(*found_p==(*parent_p)->right)
+    if((*found_p)==(*parent_p)->right)
         (*parent_p)->right=(*found_p)->right;
     else
-        (*parent_p)->left=(*found_p)->left;
+        (*parent_p)->left=(*found_p)->left?(*found_p)->left:(*found_p)->right;
+    free((*found_p));
 }
 
 void replace_with_successor(node_t** found_p,node_t** parent_p){
+    node_t* leftMost = (*found_p)->right;
+    node_t* leftMostParent = (*found_p);
+    while (leftMost->left || leftMost->right) {
+        leftMostParent = leftMost;
+        if(leftMost->left!=NULL){
+            leftMost = leftMost->left;
+        }else{
+            leftMost = leftMost->right;
+        }
+    }
+    /*found leftmost*/
+    /*it is a leaf*/
 
+    /*switch node values*/
+    if ((*found_p) == (*parent_p)->right)
+        (*parent_p)->right->data = leftMost->data;
+    else
+        (*parent_p)->left->data = leftMost->data;
+
+    /*clear parent entry*/
+    clear_parent_entry(&leftMostParent, &leftMost);
+    free(leftMost);
 
 }
 
@@ -151,37 +174,28 @@ int remove_val(node_t* root, int data){
 
     node_t* found;
     node_t* parent;
-    ret=lookup(root,&found, &parent, data);
+    lookup(root,&found, &parent, data);
     if(ret!=0) return -1;
 
     /*Option 1 is a leaf*/
     if(!(found->right || found->left)){
-        clear_parent_entry( &parent, data);
+        clear_parent_entry( &parent, &found);
         printf("Deleted a leaf\n");
-        free(found);
         return 0;
     }
 
+    /*Option 2 two children*/
+    else if((found->right && found->left)){
+        replace_with_successor(&found, &parent);
+        printf("Deleted a node with two children\n");
 
-    /*Option 2 one child*/
-    if((int)(found->right) ^ (int)(found->left)){
+        return 0;
+    }else{
+    /*Option 3 one child*/
         bypass(&found, &parent);
         printf("Deleted a node with one child\n");
-        free(found);
         return 0;
     }
-
-
-    /*Option 3 two child*/
-    if((found->right && found->left)){
-            bypass(&found, &parent);
-            replace_with_successor(&found, &parent);
-            printf("Deleted a node with two children\n");
-            free(found);
-        return 0;
-    }
-
-
     return 0;
 }
 
@@ -210,14 +224,16 @@ int main(void) {
     /*create root*/
 
 
-    create_and_insert_node(tree,1);
+    create_and_insert_node(tree,2);
 
     /*create some nodes*/
-    create_and_insert_node(tree,2);
-    create_and_insert_node(tree,10);
     create_and_insert_node(tree,3);
-    create_and_insert_node(tree,7);
+    create_and_insert_node(tree,10);
+    create_and_insert_node(tree,4);
     create_and_insert_node(tree,13);
+    create_and_insert_node(tree,7);
+    create_and_insert_node(tree,6);
+    create_and_insert_node(tree,9);
 
     node_t *root =g_ptr_array_index(tree, 0);
 
@@ -227,7 +243,7 @@ int main(void) {
     /*test lookup*/
     node_t* found;
     node_t* parent;
-    ret=lookup(root,&found, &parent, 3);
+    ret=lookup(root,&found, &parent, 7);
     if(ret==0){
         printf("Node found!\n");
         printf("Found val: %d\n",found->data);
@@ -237,7 +253,7 @@ int main(void) {
 
 
     /*remove*/
-    remove_val( root, 13);
+    remove_val( root, 10);
     /*traverse again*/
     traverse(root);
 
